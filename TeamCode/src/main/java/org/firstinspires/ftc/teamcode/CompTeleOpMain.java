@@ -12,7 +12,7 @@ import org.firstinspires.ftc.teamcode.subsystems.SpindexerSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.TurretSubsystem;
 import org.firstinspires.ftc.teamcode.util.EdgeButton;
 
-@TeleOp(name="Comp TeleOp Main", group="Competition")
+@TeleOp(name="Comp Tele Main", group="Competition")
 public class CompTeleOpMain extends OpMode {
 
     // ========================
