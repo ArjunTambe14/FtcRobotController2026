@@ -23,6 +23,15 @@ public class TurretSubsystem {
     private double unwindPower = 0.60;
     private double driverMaxPower = 0.50;
     private double deadzone = 0.05;
+    private double autoKp = 0.02;
+    private double autoDeadzoneDeg = 1.0;
+    private double autoMaxPower = 0.35;
+    private double autoYawSign = 1.0;
+
+    private boolean autoEnabled = false;
+    private boolean autoHasTarget = false;
+    private double autoYawDeg = 0.0;
+    private double autoCommand = 0.0;
 
     private double turretDegrees = 0.0;
     private int unwindDir = 0; // -1 unwind negative, +1 unwind positive, 0 none
@@ -52,10 +61,38 @@ public class TurretSubsystem {
         this.deadzone = deadzone;
     }
 
+    public void configureAuto(double autoKp, double autoDeadzoneDeg, double autoMaxPower, double autoYawSign) {
+        this.autoKp = autoKp;
+        this.autoDeadzoneDeg = autoDeadzoneDeg;
+        this.autoMaxPower = autoMaxPower;
+        this.autoYawSign = autoYawSign;
+    }
+
+    public void setAutoTracking(boolean enabled, boolean hasTarget, double yawDeg) {
+        this.autoEnabled = enabled;
+        this.autoHasTarget = hasTarget;
+        this.autoYawDeg = yawDeg;
+    }
+
     public void update(Gamepad g) {
         turretDegrees = computeTurretDegrees();
 
         double cmd = applyDeadzone(g.left_stick_x, deadzone) * driverMaxPower;
+        boolean driverActive = Math.abs(cmd) > 0.0;
+
+        double autoCmd = 0.0;
+        if (autoEnabled && autoHasTarget) {
+            double error = autoYawDeg * autoYawSign;
+            if (Math.abs(error) > autoDeadzoneDeg) {
+                autoCmd = clip11(error * autoKp);
+                autoCmd = Range.clip(autoCmd, -autoMaxPower, autoMaxPower);
+            }
+        }
+        autoCommand = autoCmd;
+
+        if (autoEnabled && autoHasTarget && !driverActive) {
+            cmd = autoCmd;
+        }
 
         if (unwindDir == 0) {
             if (turretDegrees >= limitDeg && cmd > 0) {
@@ -90,6 +127,22 @@ public class TurretSubsystem {
 
     public boolean isUnwinding() {
         return unwindDir != 0;
+    }
+
+    public boolean isAutoEnabled() {
+        return autoEnabled;
+    }
+
+    public boolean hasAutoTarget() {
+        return autoHasTarget;
+    }
+
+    public double getAutoYawDeg() {
+        return autoYawDeg;
+    }
+
+    public double getAutoCommand() {
+        return autoCommand;
     }
 
     private double computeTurretDegrees() {

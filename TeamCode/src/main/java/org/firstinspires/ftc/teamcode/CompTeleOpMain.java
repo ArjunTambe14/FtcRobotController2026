@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.hardware.limelightvision.LLResult;
+import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import org.firstinspires.ftc.teamcode.hardware.RobotHardware;
@@ -58,6 +60,13 @@ public class CompTeleOpMain extends OpMode {
     public static double TURRET_DRIVER_MAX_POWER = 0.50;
     public static double TURRET_DEADZONE = 0.05;
 
+    // Limelight AprilTag yaw tracking (auto-aim)
+    public static double LIMELIGHT_YAW_KP = 0.02;
+    public static double LIMELIGHT_YAW_DEADZONE_DEG = 1.0;
+    public static double LIMELIGHT_MAX_POWER = 0.35;
+    public static double LIMELIGHT_YAW_SIGN = 1.0; // flip if auto-aim turns the wrong way
+    public static int LIMELIGHT_PIPELINE = 0;
+
     private RobotHardware robot;
 
     private DriveSubsystem drive;
@@ -71,6 +80,10 @@ public class CompTeleOpMain extends OpMode {
     private final EdgeButton tuneUp = new EdgeButton();
     private final EdgeButton tuneDown = new EdgeButton();
     private int tuningIndex = 0;
+    private Limelight3A limelight;
+    private boolean limelightAvailable = false;
+    private boolean limelightHasTarget = false;
+    private double limelightYawDeg = 0.0;
 
     private static final TuningParam[] TUNING_ORDER = new TuningParam[]{
             TuningParam.BALL_HOME,
@@ -102,6 +115,16 @@ public class CompTeleOpMain extends OpMode {
         turret.configure(MOTOR_ENCODER_PPR, QUADRATURE_MULT, TURRET_MOTOR_GEAR_RATIO,
                 PINION_TEETH, TURRET_GEAR_TEETH, TURRET_LIMIT_DEG, TURRET_UNWIND_MARGIN_DEG,
                 TURRET_UNWIND_POWER, TURRET_DRIVER_MAX_POWER, TURRET_DEADZONE);
+        turret.configureAuto(LIMELIGHT_YAW_KP, LIMELIGHT_YAW_DEADZONE_DEG, LIMELIGHT_MAX_POWER, LIMELIGHT_YAW_SIGN);
+
+        try {
+            limelight = hardwareMap.get(Limelight3A.class, "limelight");
+            limelight.pipelineSwitch(LIMELIGHT_PIPELINE);
+            limelight.start();
+            limelightAvailable = true;
+        } catch (Exception e) {
+            limelightAvailable = false;
+        }
 
         telemetry.addLine("Initialized");
         telemetry.update();
@@ -115,6 +138,7 @@ public class CompTeleOpMain extends OpMode {
         boolean tuneRightPressed = tuneRight.rising(gamepad2.dpad_right);
         boolean tuneUpPressed = tuneUp.rising(gamepad2.dpad_up);
         boolean tuneDownPressed = tuneDown.rising(gamepad2.dpad_down);
+        boolean autoAimEnabled = !tuningMode && gamepad2.right_bumper; // hold to auto-aim
 
         if (tuningMode) {
             if (tuneRightPressed) {
@@ -201,6 +225,22 @@ public class CompTeleOpMain extends OpMode {
 
         intake.update(gamepad1);
 
+        if (limelightAvailable) {
+            LLResult result = limelight.getLatestResult();
+            if (result != null && result.isValid()) {
+                limelightYawDeg = result.getTx();
+                limelightHasTarget = !result.getFiducialResults().isEmpty();
+            } else {
+                limelightYawDeg = 0.0;
+                limelightHasTarget = false;
+            }
+        } else {
+            limelightYawDeg = 0.0;
+            limelightHasTarget = false;
+        }
+
+        turret.setAutoTracking(autoAimEnabled, limelightHasTarget, limelightYawDeg);
+
         shooter.update(gamepad2, tuningMode);
 
         spindexer.update(gamepad2, tuningMode);
@@ -225,6 +265,11 @@ public class CompTeleOpMain extends OpMode {
         telemetry.addData("SupportWheel", String.format("%.2f", shooter.getSupportWheelPower()));
         telemetry.addData("Turret Deg", String.format("%.1f", turret.getTurretDegrees()));
         telemetry.addData("Turret Unwind", turret.isUnwinding() ? "ON" : "OFF");
+        telemetry.addData("Turret Auto", turret.isAutoEnabled() ? "ON" : "OFF");
+        telemetry.addData("LL Avail", limelightAvailable ? "YES" : "NO");
+        telemetry.addData("LL HasTarget", limelightHasTarget ? "YES" : "NO");
+        telemetry.addData("LL Yaw", String.format("%.2f", limelightYawDeg));
+        telemetry.addData("LL AutoCmd", String.format("%.2f", turret.getAutoCommand()));
         telemetry.addData("Slow Mode", drive.isSlowMode() ? "ON" : "OFF");
 
         telemetry.addLine("---- COPY CONSTANTS ----");
@@ -256,6 +301,13 @@ public class CompTeleOpMain extends OpMode {
                 return shooter.getSupportWheelFeed();
             default:
                 return 0.0;
+        }
+    }
+
+    @Override
+    public void stop() {
+        if (limelightAvailable && limelight != null) {
+            limelight.stop();
         }
     }
 
