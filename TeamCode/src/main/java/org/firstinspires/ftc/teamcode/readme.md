@@ -6,6 +6,31 @@ This module, TeamCode, is the place where you will write/paste the code for your
 robot controller App. This module is currently empty (a clean slate) but the
 process for adding OpModes is straightforward.
 
+## Robot Controller Configuration (Final)
+
+These names must match exactly in the RC config. Hub/port numbers are set in the RC app; the code uses only the names.
+
+Control Hub — Motors
+- 0: intakeLeft (front intake)
+- 1: frontLeft
+- 2: backLeft
+- 3: intakeRight (back intake)
+
+Expansion Hub — Motors
+- 0: shooterFlywheel (turret shooter)
+- 1: turretRotate (turret spinner)
+- 2: backRight
+- 3: frontRight
+
+Expansion Hub — Servos
+- 0: supportWheelCR (wheel that pushes ball up)
+- 1: spindexerAxon
+- 2: ballPusher
+- 3: hoodServo
+
+Sensor
+- Limelight USB device name: limelight (USB 2.0)
+
 ## Creating your own OpModes
 
 The easiest way to create your own OpMode is to copy a Sample OpMode and make it your own.
