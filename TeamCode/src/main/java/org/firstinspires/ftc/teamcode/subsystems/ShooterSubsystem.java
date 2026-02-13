@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
@@ -47,6 +48,7 @@ public class ShooterSubsystem {
         this.hoodAdjustRate = hoodAdjustRate;
         this.supportWheelFeed = supportWheelFeed;
 
+        r.shooterFlywheel.setDirection(DcMotorSimple.Direction.REVERSE);
         r.shooterFlywheel.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         r.ballPusher.setPosition(clip01(ballPusherHome));
         r.hoodServo.setPosition(clip01(hoodPos));
